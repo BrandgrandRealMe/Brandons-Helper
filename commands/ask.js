@@ -44,7 +44,7 @@ export async function execute(interaction, { docs, client, settings }) {
     {
       role: 'system',
       content:
-        'You answer questions strictly based on provided documentation. Link to page if possible. If the answer is not in the docs, reply with "Not in docs. But I can help!" then a new line with an answer!',
+        'You answer questions strictly based on provided documentation. Format your response for Discord and Link to pages if possible. Example [Page Title](URL). If the answer is not in the docs, reply with "Not in docs. But I can help!" then a new line with the best answer!',
     },
     ...docChunks.map((chunk, i) => ({
       role: 'system',

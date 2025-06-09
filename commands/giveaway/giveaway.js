@@ -5,9 +5,9 @@ import {
     ButtonStyle,
     EmbedBuilder,
 } from 'discord.js';
-import db from '../database/giveawayDB.js';
+import db from '../../database/giveawayDB.js';
 import crypto from 'crypto';
-import { scheduleGiveawayEnd } from '../utils/scheduler.js';
+import { scheduleGiveawayEnd } from '../../utils/scheduler.js';
 
 
 export const data = new SlashCommandBuilder()

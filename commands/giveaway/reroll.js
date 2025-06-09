@@ -1,5 +1,5 @@
 import { SlashCommandBuilder, EmbedBuilder } from 'discord.js';
-import db from '../database/giveawayDB.js';
+import db from '../../database/giveawayDB.js';
 
 export const data = new SlashCommandBuilder()
   .setName('reroll')
