@@ -1,5 +1,7 @@
 import giveawayDB from '../database/giveawayDB.js';
-import reminderDB from '../database/reminderDB.js'; // ✅ separate DB for reminders
+import reminderDB from '../database/reminderDB.js';
+import pollDB from '../database/pollDB.js';
+
 import { EmbedBuilder } from 'discord.js';
 
 export function resumeAllGiveaways(client) {
@@ -78,3 +80,49 @@ export function scheduleReminder(client, reminderId, delay) {
   }, delay);
 }
 
+export function resumeAllPolls(client) {
+  const now = Date.now();
+  const activePolls = pollDB.prepare('SELECT * FROM polls').all();
+
+  for (const poll of activePolls) {
+    const delay = poll.end_time - now;
+    if (delay <= 0) {
+      schedulePollEnd(client, poll.id, 0); // end immediately if overdue
+    } else {
+      schedulePollEnd(client, poll.id, delay);
+    }
+  }
+}
+
+
+export function schedulePollEnd(client, pollId, delay) {
+  setTimeout(async () => {
+    const poll = pollDB.prepare('SELECT * FROM polls WHERE id = ?').get(pollId);
+    if (!poll) return;
+
+    const votes = pollDB.prepare('SELECT option_index, COUNT(*) as count FROM poll_votes WHERE poll_id = ? GROUP BY option_index').all(pollId);
+    const options = poll.options ? JSON.parse(poll.options) : [];
+
+    const summary = options.map((opt, i) => {
+      const count = votes.find(v => v.option_index === i)?.count || 0;
+      return `${opt}: **${count}** vote(s)`;
+    }).join('\n');
+
+    const resultEmbed = new EmbedBuilder()
+      .setTitle('📊 Poll Ended')
+      .setDescription(`**${poll.question}**\n\n${summary || 'No votes'}`)
+      .setColor('Grey')
+      .setTimestamp();
+
+    try {
+      const channel = await client.channels.fetch(poll.channel_id);
+      const msg = await channel.messages.fetch(poll.message_id);
+      await msg.edit({ embeds: [resultEmbed], components: [] });
+    } catch (err) {
+      console.error('Poll end update failed:', err);
+    }
+
+    pollDB.prepare('DELETE FROM polls WHERE id = ?').run(pollId);
+    pollDB.prepare('DELETE FROM poll_votes WHERE poll_id = ?').run(pollId);
+  }, delay);
+}

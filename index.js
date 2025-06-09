@@ -3,6 +3,7 @@ import fs from 'fs';
 import fetch from 'node-fetch';
 import { resumeAllGiveaways, resumeAllReminders } from './utils/scheduler.js';
 import db from './database/giveawayDB.js';
+import { handleButton } from './handlers/buttonHandler.js';
 
 import settings from './config/settings.js';
 import './cron-fetch.js';
@@ -29,6 +30,10 @@ let docs = '';
 commandHandler(client);
 
 client.on(Events.InteractionCreate, async interaction => {
+  if (interaction.isButton()) {
+    await handleButton(interaction);
+  }
+
   if (!interaction.isChatInputCommand()) return;
 
   const command = client.commands.get(interaction.commandName);

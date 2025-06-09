@@ -1,8 +1,7 @@
 # Custom
 docs.txt
 settings.js
-giveaways.db
-reminders.db
+*.db
 
 # Logs
 logs
