@@ -1,5 +1,8 @@
 import { SlashCommandBuilder } from 'discord.js';
 
+const cooldown = new Map(); // userId => timestamp
+const COOLDOWN_SECONDS = 5;
+
 export const data = new SlashCommandBuilder()
   .setName('ask')
   .setDescription('Ask a question based on the docs')
@@ -7,14 +10,74 @@ export const data = new SlashCommandBuilder()
     option.setName('question').setDescription('Your question').setRequired(true)
   );
 
+// Helper to chunk docs
+function chunkText(text, maxLength = 4000) {
+  const chunks = [];
+  for (let i = 0; i < text.length; i += maxLength) {
+    chunks.push(text.slice(i, i + maxLength));
+  }
+  return chunks;
+}
+
 export async function execute(interaction, { docs, client, settings }) {
+  const userId = interaction.user.id;
+  const now = Date.now();
+
+  // Cooldown check
+  const lastUsed = cooldown.get(userId);
+  if (lastUsed && now - lastUsed < COOLDOWN_SECONDS * 1000) {
+    const remaining = Math.ceil((COOLDOWN_SECONDS * 1000 - (now - lastUsed)) / 1000);
+    return interaction.reply({
+      content: `⏳ Please wait ${remaining}s before using this command again.`,
+      ephemeral: true,
+    });
+  }
+
+  cooldown.set(userId, now);
+
   const question = interaction.options.getString('question');
   await interaction.deferReply();
 
-  const prompt = `Use only the documentation below to answer:\n\n${docs.slice(
-    0,
-    settings.DOCS_MAX_CHAR_LENGTH
-  )}\n\nQuestion: ${question}`;
+  const docChunks = chunkText(docs, settings.DOCS_MAX_CHAR_LENGTH || 4000);
+
+  const messages = [
+    {
+      role: 'system',
+      content:
+        'You answer questions strictly based on provided documentation. Link to page if possible. If the answer is not in the docs, reply with "Not in docs. But I can help!" then a new line with an answer!',
+    },
+    ...docChunks.map((chunk, i) => ({
+      role: 'system',
+      content: `Documentation Part ${i + 1}:\n${chunk}`,
+    })),
+    {
+      role: 'user',
+      content: `Question: ${question}`,
+    },
+  ];
+
+  let pasteUrl = null;
+
+  // 🧪 Upload prompt if devMode is on
+  if (settings.devMode) {
+    try {
+      const pasteRes = await fetch('https://api.pastes.dev/post', {
+        method: 'POST',
+        body: JSON.stringify({
+          content: messages.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join('\n\n'),
+          language: 'text',
+        }),
+      });
+
+      const pasteData = await pasteRes.json();
+      console.log(pasteData);
+      if (pasteRes.ok && pasteData?.key) {
+        pasteUrl = `https://pastes.dev/${pasteData.key}`;
+      }
+    } catch (err) {
+      console.warn('⚠️ Failed to upload prompt to pastes.dev:', err);
+    }
+  }
 
   try {
     const res = await fetch(settings.AI_URL, {
@@ -25,17 +88,7 @@ export async function execute(interaction, { docs, client, settings }) {
       },
       body: JSON.stringify({
         model: settings.AI_MODEL,
-        messages: [
-          {
-            role: 'system',
-            content:
-              'You answer questions strictly based on provided documentation. Link to page if possible. If the answer is not in the docs, reply with "Not in docs. But I can help!" then a new line with the answer!',
-          },
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
+        messages,
       }),
     });
 
@@ -56,7 +109,12 @@ export async function execute(interaction, { docs, client, settings }) {
     }
 
     if (answer?.length > 2000) answer = answer.slice(0, 1997) + '...';
-    await interaction.editReply(answer || '❌ No response from the AI.');
+
+    const replyText = `${answer || '❌ No response from the AI.'}${
+      pasteUrl ? `\n\n📎 Prompt: ${pasteUrl}` : ''
+    }`;
+
+    await interaction.editReply(replyText);
   } catch (err) {
     console.error('❌ Ask command error:', err);
     await interaction.editReply('Unexpected error occurred.');

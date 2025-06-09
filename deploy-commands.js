@@ -1,4 +1,3 @@
-// deploy-commands.js
 import { REST, Routes } from 'discord.js';
 import fs from 'fs';
 import path from 'path';
@@ -9,18 +8,25 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const commands = [];
 
-const commandFiles = fs
-  .readdirSync(path.join(__dirname, './commands'))
-  .filter(file => file.endsWith('.js'));
+async function loadCommandsRecursively(dir) {
+  const files = fs.readdirSync(dir, { withFileTypes: true });
 
-for (const file of commandFiles) {
-  const command = await import(`./commands/${file}`);
-  if ('data' in command && 'execute' in command) {
-    commands.push(command.data.toJSON());
-  } else {
-    console.warn(`⚠️ The command at ${file} is missing "data" or "execute"`);
+  for (const file of files) {
+    const fullPath = path.join(dir, file.name);
+    if (file.isDirectory()) {
+      await loadCommandsRecursively(fullPath);
+    } else if (file.name.endsWith('.js')) {
+      const command = await import(fullPath);
+      if ('data' in command && 'execute' in command) {
+        commands.push(command.data.toJSON());
+      } else {
+        console.warn(`⚠️ The command at ${fullPath} is missing "data" or "execute"`);
+      }
+    }
   }
 }
+
+await loadCommandsRecursively(path.join(__dirname, './commands'));
 
 const rest = new REST({ version: '10' }).setToken(settings.DISCORD_TOKEN);
 

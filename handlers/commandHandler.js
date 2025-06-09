@@ -4,19 +4,25 @@ import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export default function commandHandler(client) {
-  const commandFiles = fs
-    .readdirSync(path.join(__dirname, '../commands'))
-    .filter(file => file.endsWith('.js'));
+async function loadCommandsRecursively(dir, client) {
+  const files = fs.readdirSync(dir, { withFileTypes: true });
 
-  for (const file of commandFiles) {
-    const filePath = path.join(__dirname, '../commands', file);
-    import(filePath).then(command => {
+  for (const file of files) {
+    const fullPath = path.join(dir, file.name);
+    if (file.isDirectory()) {
+      await loadCommandsRecursively(fullPath, client);
+    } else if (file.name.endsWith('.js')) {
+      const command = await import(fullPath);
       if ('data' in command && 'execute' in command) {
         client.commands.set(command.data.name, command);
+        console.log(`Loaded command: ${command.data.name}`);
       } else {
-        console.warn(`⚠️ Command at ${file} is missing "data" or "execute".`);
+        console.warn(`⚠️ Command at ${fullPath} is missing "data" or "execute".`);
       }
-    });
+    }
   }
+}
+
+export default async function commandHandler(client) {
+  await loadCommandsRecursively(path.join(__dirname, '../commands'), client);
 }
