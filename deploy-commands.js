@@ -1,6 +1,6 @@
 // deploy-commands.js
 import { REST, Routes, SlashCommandBuilder } from 'discord.js';
-import 'dotenv/config'; // Make sure this is at the top for environment variables
+import settings from './config/settings.js'; 
 
 const commands = [
   new SlashCommandBuilder()
@@ -11,7 +11,7 @@ const commands = [
     ),
 ].map(cmd => cmd.toJSON());
 
-const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
+const rest = new REST({ version: '10' }).setToken(settings.DISCORD_TOKEN);
 
 // Wrap the deployment logic in an async IIFE
 (async () => {
@@ -20,8 +20,8 @@ const rest = new REST({ version: '10' }).setToken(process.env.DISCORD_TOKEN);
 
     await rest.put(
       Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID
+        settings.CLIENT_ID,
+        settings.GUILD_ID 
       ),
       { body: commands }
     );

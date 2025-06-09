@@ -2,17 +2,17 @@ import fetch from 'node-fetch';
 import * as cheerio from 'cheerio';
 import { parseStringPromise } from 'xml2js';
 import fs from 'fs';
-
-const BASE_URL = process.env.BASE_URL; // Ensure this is set in your .env
+import settings from './config/settings.js'; // Import your settings object
 
 export async function fetchDocsFromSitemap() {
-  if (!BASE_URL) {
-    console.error('🚨 BASE_URL is not defined in your .env file!');
+  // Use settings.BASE_URL directly
+  if (!settings.BASE_URL) {
+    console.error('🚨 BASE_URL is not defined in your settings.js file!');
     return;
   }
-  const SITEMAP_URL = `${BASE_URL}/sitemap.xml`;
+  const SITEMAP_URL = `${settings.BASE_URL}/sitemap.xml`; 
 
-  try {
+  try { 
     console.log(`Fetching sitemap from: ${SITEMAP_URL}`);
     const sitemapRes = await fetch(SITEMAP_URL);
     if (!sitemapRes.ok) {
@@ -23,7 +23,8 @@ export async function fetchDocsFromSitemap() {
 
     const urls = sitemap.urlset.url
       .map(entry => entry.loc[0])
-      .filter(url => url.startsWith(`${BASE_URL}/docs/`)); // Filter for specific documentation paths
+      // Use settings.BASE_URL for filtering
+      .filter(url => url.startsWith(`${settings.BASE_URL}/docs/`));
 
     console.log(`🔍 Found ${urls.length} /docs URLs to process.`);
 

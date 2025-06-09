@@ -1,0 +1,55 @@
+// config/settings.js.template
+// This file serves as a template for your settings.js.
+// COPY THIS FILE TO settings.js AND FILL IN THE PLACEHOLDERS.
+// DO NOT COMMIT YOUR ACTUAL settings.js FILE WITH SENSITIVE INFORMATION.
+
+// Make sure to create a .env file in your project root with:
+// DISCORD_TOKEN="YOUR_DISCORD_BOT_TOKEN_HERE"
+// AI_TOKEN="YOUR_AI_API_TOKEN_HERE"
+//
+// And then run your application using 'node -r dotenv/config your_script.js'
+// or ensure 'dotenv/config' is imported in your main entry file or this file if needed.
+
+// import 'dotenv/config'; // UNCOMMENT THIS LINE IF settings.js IS THE FIRST FILE TO USE ENV VARS
+
+/**
+ * Configuration settings for the bot.
+ * Values marked with 'process.env.' should be set in your .env file.
+ */
+const settings = {
+  // Discord Bot Settings
+  // CLIENT_ID and GUILD_ID are often specific to your bot and development server.
+  // You can hardcode them here if they rarely change, or move them to .env.
+  CLIENT_ID: "YOUR_DISCORD_CLIENT_ID", // Example: "1381418314412331058"
+  GUILD_ID: "YOUR_DISCORD_GUILD_ID",   // Example: "1379665832350842910"
+  DISCORD_TOKEN: process.env.DISCORD_TOKEN, // Your bot's token (from .env)
+
+  // Documentation Fetching Settings
+  // BASE_URL is the root URL of your documentation site.
+  BASE_URL: "https://db.brandgrand.rocks", // Example: "https://docs.example.com"
+  DOCS_MAX_CHAR_LENGTH: 8000, // Max characters of docs to send to AI (adjust as needed)
+
+  // AI API Settings
+  // AI_URL is the endpoint for your AI service.
+  // AI_MODEL is the specific AI model to use.
+  // AI_TOKEN is your authorization token for the AI service (from .env).
+  AI_URL: "https://hercai.onrender.com/v1/chat/completions",
+  AI_MODEL: "google/Gemini-2.5-Flash-Preview-05-20", // Refer to your provider's list for best model
+  AI_TOKEN: process.env.AI_TOKEN,
+
+  // Logging & Error Handling Settings
+  // ERROR_LOG_CHANNEL_ID is the Discord channel ID where bot errors will be logged.
+  ERROR_LOG_CHANNEL_ID: "YOUR_DISCORD_ERROR_CHANNEL_ID", // Example: "1381445352405602406"
+};
+
+// Optional: Add a check to ensure critical variables are set.
+// This check will run when settings.js is imported.
+for (const key of ['CLIENT_ID', 'GUILD_ID', 'DISCORD_TOKEN', 'BASE_URL', 'AI_URL', 'AI_TOKEN', 'AI_MODEL', 'ERROR_LOG_CHANNEL_ID']) {
+  if (!settings[key]) {
+    console.warn(`⚠️ Warning: Configuration variable '${key}' is not set. Please ensure it's defined in settings.js or your .env file.`);
+    // In a production environment, you might want to stop the application here:
+    // throw new Error(`Missing critical configuration variable: ${key}`);
+  }
+}
+
+export default settings;
