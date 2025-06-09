@@ -42,7 +42,7 @@ export async function execute(interaction) {
         .setTitle('🎁 Giveaway!')
         .setDescription(`**Prize:** ${prize}\n**Hosted by:** <@${interaction.user.id}>\nClick below to enter!`)
         .setColor('Random')
-        .setFooter({ text: `Ends in ${duration / 1000} seconds` })
+        .setFooter({ text: `Ends in ${duration / 1000} seconds ID: ${giveawayId}` })
         .setTimestamp(endTime);
 
     await interaction.reply({
