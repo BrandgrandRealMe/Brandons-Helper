@@ -1,7 +1,7 @@
 import { Client, GatewayIntentBits, Collection, Events } from 'discord.js';
 import fs from 'fs';
 import fetch from 'node-fetch';
-import { scheduleGiveawayEnd, resumeAllGiveaways } from './utils/scheduler.js';
+import { resumeAllGiveaways, resumeAllReminders } from './utils/scheduler.js';
 import db from './database/giveawayDB.js';
 
 import settings from './config/settings.js';
@@ -28,10 +28,6 @@ let docs = '';
 // Load all commands
 commandHandler(client);
 
-client.once(Events.ClientReady, () => {
-  console.log(`🤖 Logged in as ${client.user.tag}`);
-});
-
 client.on(Events.InteractionCreate, async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -54,6 +50,7 @@ client.login(settings.DISCORD_TOKEN);
 client.once(Events.ClientReady, () => {
   console.log(`🤖 Logged in as ${client.user.tag}`);
   resumeAllGiveaways(client);
+  resumeAllReminders(client);
 });
 
 // Handle entry button

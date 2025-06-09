@@ -1,9 +1,10 @@
-import db from '../database/giveawayDB.js';
+import giveawayDB from '../database/giveawayDB.js';
+import reminderDB from '../database/reminderDB.js'; // ✅ separate DB for reminders
 import { EmbedBuilder } from 'discord.js';
 
 export function resumeAllGiveaways(client) {
   const now = Date.now();
-  const active = db.prepare('SELECT * FROM giveaways WHERE ended = 0').all();
+  const active = giveawayDB.prepare('SELECT * FROM giveaways WHERE ended = 0').all();
 
   for (const g of active) {
     const delay = g.end_time - now;
@@ -17,10 +18,10 @@ export function resumeAllGiveaways(client) {
 
 export function scheduleGiveawayEnd(client, giveawayId, delay) {
   setTimeout(async () => {
-    const giveaway = db.prepare('SELECT * FROM giveaways WHERE id = ?').get(giveawayId);
+    const giveaway = giveawayDB.prepare('SELECT * FROM giveaways WHERE id = ?').get(giveawayId);
     if (!giveaway || giveaway.ended) return;
 
-    const entries = db.prepare('SELECT user_id FROM entries WHERE giveaway_id = ?').all(giveawayId);
+    const entries = giveawayDB.prepare('SELECT user_id FROM entries WHERE giveaway_id = ?').all(giveawayId);
     const winners = entries
       .sort(() => 0.5 - Math.random())
       .slice(0, giveaway.winner_count)
@@ -40,6 +41,40 @@ export function scheduleGiveawayEnd(client, giveawayId, delay) {
       console.error('❌ Failed to update giveaway message:', err);
     }
 
-    db.prepare('UPDATE giveaways SET ended = 1 WHERE id = ?').run(giveawayId);
+    giveawayDB.prepare('UPDATE giveaways SET ended = 1 WHERE id = ?').run(giveawayId);
   }, delay);
 }
+
+export function resumeAllReminders(client) {
+  const now = Date.now();
+  const reminders = reminderDB.prepare('SELECT * FROM reminders WHERE reminded = 0').all();
+
+  for (const r of reminders) {
+    const delay = r.remind_at - now;
+    if (delay <= 0) {
+      scheduleReminder(client, r.id, 0); // overdue, fire immediately
+    } else {
+      scheduleReminder(client, r.id, delay);
+    }
+  }
+}
+
+export function scheduleReminder(client, reminderId, delay) {
+  setTimeout(async () => {
+    const reminder = reminderDB.prepare('SELECT * FROM reminders WHERE id = ?').get(reminderId);
+    if (!reminder || reminder.reminded) return;
+
+    try {
+      const channel = await client.channels.fetch(reminder.channel_id);
+      if (!channel) return;
+
+      await channel.send(`<@${reminder.user_id}> ⏰ Reminder: **${reminder.message}**`);
+
+      // Mark reminder as sent
+      reminderDB.prepare('UPDATE reminders SET reminded = 1 WHERE id = ?').run(reminderId);
+    } catch (error) {
+      console.error('❌ Failed to send reminder:', error);
+    }
+  }, delay);
+}
+

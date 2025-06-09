@@ -2,6 +2,7 @@
 docs.txt
 settings.js
 giveaways.db
+reminders.db
 
 # Logs
 logs
